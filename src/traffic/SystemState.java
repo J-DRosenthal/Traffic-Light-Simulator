@@ -4,28 +4,28 @@ import java.util.List;
 import java.util.Queue;
 
 public class SystemState extends Thread {
-    long startupTime = System.nanoTime();
     int interval;
     Queue<Road> roadQueue;
-    long timeSinceChange;
-    long timeOfLastChange;
-    long currentTime;
+    long lastTimeChanged;
+    long startTime;
     int openRoadIndex = 0;
 
     public SystemState(String name, int interval, Queue<Road> roadQueue) {
         super(name);
         this.interval = interval;
         this.roadQueue = roadQueue;
+        this.startTime = System.nanoTime();
     }
 
     @Override
     public void run() {
         while (true) {
-            currentTime = (System.nanoTime() - startupTime) / 1000000000;
-            timeSinceChange = currentTime % interval;
-            if (timeSinceChange == 0 && currentTime - timeOfLastChange > 0) {
+            try {
+                Thread.sleep(interval * 1000);
                 openRoadIndex = openRoadIndex >= roadQueue.size() - 1 ? 0 : openRoadIndex + 1;
-                timeOfLastChange = currentTime;
+                lastTimeChanged = System.nanoTime();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
     }
 }
@@ -38,7 +38,7 @@ public class SystemState extends Thread {
                 ! Number of roads: %d !
                 ! Intervals: %d !
                 
-                """, currentTime, roadQueue.size(), interval);
+                """, (System.nanoTime() - startTime) / 1000000000, roadQueue.size(), interval);
         displayRoads(openRoadIndex);
         System.out.println("! Press \"Enter\" to open menu !");
     }
@@ -46,6 +46,7 @@ public class SystemState extends Thread {
     void displayRoads(int openRoadIndex) {
 
         List<Road> roadList = roadQueue.stream().toList();
+        long timeSinceChange = (System.nanoTime() - lastTimeChanged) / 1000000000;
 
         for (int i = 0; i < roadList.size(); i++) {
             long timeUntilSpecificRoadChange = i == openRoadIndex ? interval - timeSinceChange :
@@ -58,7 +59,6 @@ public class SystemState extends Thread {
                     i == openRoadIndex ? "\u001B[32m" + "Open" + "\u001B[0m" : "\u001B[31m" + "Closed" + "\u001B[0m",
                     timeUntilSpecificRoadChange);
         }
-
         System.out.println();
     }
 }
